@@ -1,0 +1,25 @@
+{
+  "name": "udemy-transcript-extractor",
+  "version": "1.0.0",
+  "description": "CLI tool to extract visible Udemy course transcripts to Markdown and JSON.",
+  "type": "module",
+  "scripts": {
+    "scrape": "tsx src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "playwright": "^1.48.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

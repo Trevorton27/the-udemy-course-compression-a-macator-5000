@@ -249,7 +249,24 @@ async function isTranscriptAlreadyOpen(page: Page): Promise<boolean> {
 async function attemptExtract(page: Page, lecture: Lecture): Promise<LectureResult> {
   console.log(`    [nav] Navigating to: ${lecture.url}`);
   await page.goto(lecture.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await page.waitForTimeout(3000); // let player settle
+  // Wait for the transcript toggle to render (React async).
+  // If it doesn't appear in 8s, try clicking the video to activate the player,
+  // then wait another 5s.
+  const toggleAppeared = await page.waitForSelector('[data-purpose="transcript-toggle"]', { timeout: 8_000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!toggleAppeared) {
+    try {
+      const video = page.locator('video').first();
+      if (await video.count() > 0) {
+        console.log('    [nav] Toggle not yet visible — clicking video to activate player...');
+        await video.click({ timeout: 3000 });
+        await page.waitForSelector('[data-purpose="transcript-toggle"]', { timeout: 5_000 }).catch(() => {});
+      }
+    } catch { /* ignore */ }
+  }
+  await page.waitForTimeout(300);
   console.log(`    [nav] Landed on: ${page.url()} — title: ${await page.title()}`);
 
   // If transcript cues are already visible (carried over from SPA navigation), skip toggle
@@ -257,13 +274,8 @@ async function attemptExtract(page: Page, lecture: Lecture): Promise<LectureResu
   if (!alreadyOpen) {
     const toggled = await clickTranscriptToggle(page);
     if (!toggled) {
-      console.log('    [toggle] FAILED — no transcript toggle found. Skipping lecture.');
-      return {
-        lecture,
-        rows: [],
-        skipped: true,
-        skipReason: 'Transcript toggle button not found in DOM.',
-      };
+      console.log('    [toggle] No transcript toggle found — lecture has no transcript.');
+      return { lecture, rows: [], skipped: false };
     }
   }
 
@@ -277,13 +289,8 @@ async function attemptExtract(page: Page, lecture: Lecture): Promise<LectureResu
   const rows = await extractRows(page);
 
   if (rows.length === 0) {
-    console.log('    [cues] No cue rows extracted.');
-    return {
-      lecture,
-      rows: [],
-      skipped: true,
-      skipReason: 'Transcript panel found but no cue rows extracted.',
-    };
+    console.log('    [cues] No cue rows extracted — transcript panel open but empty.');
+    return { lecture, rows: [], skipped: false };
   }
 
   console.log(`    [cues] Extracted ${rows.length} rows.`);

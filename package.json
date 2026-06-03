@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "scrape": "tsx src/index.ts",
+    "optimize": "tsx src/optimize.ts",
+    "scan": "tsx src/scan.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },

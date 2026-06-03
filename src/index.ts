@@ -19,6 +19,40 @@ import {
   saveErrors,
 } from './storage.js';
 import type { LectureResult } from './types.js';
+import { courseOutputDir } from './storage.js';
+import { buildInventory } from './optimizer/courseInventory.js';
+import { classifyCourse } from './optimizer/contentClassifier.js';
+import { generateStudyPlan } from './optimizer/studyPlanGenerator.js';
+import { writeInventory, writeOptimizedPlan, writeSelectedPlan } from './optimizer/markdownWriter.js';
+import { promptForSelection } from './optimizer/selectionPrompt.js';
+
+async function runScanMode(results: LectureResult[], courseTitle: string, outputDir: string): Promise<void> {
+  console.log('\nRunning scan mode...');
+  const inventory = buildInventory(results, courseTitle);
+  classifyCourse(inventory, results);
+  writeInventory(outputDir, inventory);
+}
+
+async function runOptimizeMode(
+  results: LectureResult[],
+  courseTitle: string,
+  outputDir: string,
+  mode: string,
+): Promise<void> {
+  console.log('\nRunning optimize mode...');
+  const inventory = buildInventory(results, courseTitle);
+  const classified = classifyCourse(inventory, results);
+  writeInventory(outputDir, inventory);
+
+  if (mode === 'selected') {
+    const criteria = await promptForSelection(inventory);
+    const plan = generateStudyPlan(inventory, classified, criteria);
+    writeSelectedPlan(outputDir, plan, courseTitle);
+  } else {
+    const plan = generateStudyPlan(inventory, classified);
+    writeOptimizedPlan(outputDir, plan, courseTitle);
+  }
+}
 
 const DELAY_MIN_MS = parseInt(process.env['DELAY_MIN_MS'] ?? '1500', 10);
 const DELAY_MAX_MS = parseInt(process.env['DELAY_MAX_MS'] ?? '3500', 10);
@@ -28,7 +62,7 @@ function isUdemyCourseUrl(url: string): boolean {
   return /^https?:\/\/(www\.)?udemy\.com\/course\/[^/]+/.test(url);
 }
 
-async function run(courseUrl: string, opts: { overwrite: boolean; force: boolean }): Promise<void> {
+async function run(courseUrl: string, opts: { overwrite: boolean; force: boolean; scan?: boolean; optimize?: string }): Promise<void> {
   if (!isUdemyCourseUrl(courseUrl)) {
     console.error('Error: URL must be a Udemy course URL matching https://www.udemy.com/course/<slug>/');
     process.exit(1);
@@ -87,6 +121,14 @@ async function run(courseUrl: string, opts: { overwrite: boolean; force: boolean
     saveSkipped(courseTitle, results);
     saveErrors(courseTitle, results);
 
+    // Post-scrape optimizer hooks
+    const outputDir = courseOutputDir(courseTitle);
+    if (opts.scan) {
+      await runScanMode(results, courseTitle, outputDir);
+    } else if (opts.optimize) {
+      await runOptimizeMode(results, courseTitle, outputDir, opts.optimize);
+    }
+
     // Summary
     const extracted = results.filter((r) => !r.skipped && !r.error).length;
     const skipped = results.filter((r) => r.skipped).length;
@@ -115,7 +157,9 @@ program
   .argument('<courseUrl>', 'Full Udemy course URL (https://www.udemy.com/course/<slug>/)')
   .option('--overwrite', 'Re-extract lectures that already have output files')
   .option('--force', 'Alias for --overwrite')
-  .action((courseUrl: string, opts: { overwrite: boolean; force: boolean }) => {
+  .option('--scan', 'Generate course-inventory only after scraping')
+  .option('--optimize <mode>', 'Generate study plan after scraping (mode: all | selected)')
+  .action((courseUrl: string, opts: { overwrite: boolean; force: boolean; scan?: boolean; optimize?: string }) => {
     run(courseUrl, opts).catch((err) => {
       console.error('Fatal error:', err instanceof Error ? err.message : err);
       process.exit(1);

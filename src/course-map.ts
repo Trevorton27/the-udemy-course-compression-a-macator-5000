@@ -2,6 +2,12 @@
 import { type Page } from 'playwright';
 import type { Lecture, CourseMap } from './types.js';
 import { SELECTORS } from './types.js';
+import { ensureLoggedIn } from './auth.js';
+
+function isLoginPage(page: Page): boolean {
+  const url = page.url();
+  return url.includes('/login') || url.includes('/join/');
+}
 
 /** Strip any /learn/... suffix so we always land on the course overview page */
 function toCourseOverviewUrl(url: string): string {
@@ -261,6 +267,13 @@ export async function buildCourseMap(page: Page, courseUrl: string): Promise<Cou
   await page.goto(overviewUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForTimeout(2500);
 
+  if (isLoginPage(page)) {
+    console.log('Session expired — redirected to login page. Re-authenticating...');
+    await ensureLoggedIn(page);
+    await page.goto(overviewUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForTimeout(2500);
+  }
+
   // Scroll to trigger lazy-loaded curriculum sections
   await page.evaluate('window.scrollTo(0, document.body.scrollHeight / 2)');
   await page.waitForTimeout(1000);
@@ -289,6 +302,13 @@ export async function buildCourseMap(page: Page, courseUrl: string): Promise<Cou
   const playerUrl = courseUrl.includes('/learn/') ? courseUrl : overviewUrl + 'learn/';
   if (page.url().split('#')[0] !== playerUrl.split('#')[0]) {
     console.log(`Navigating to player page: ${playerUrl}`);
+    await page.goto(playerUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForTimeout(3000);
+  }
+
+  if (isLoginPage(page)) {
+    console.log('Session expired — redirected to login page. Re-authenticating...');
+    await ensureLoggedIn(page);
     await page.goto(playerUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForTimeout(3000);
   }

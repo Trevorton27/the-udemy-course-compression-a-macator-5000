@@ -1,4 +1,4 @@
-# Udemy Transcriptamacator 5000
+# The Udemy Course Compression-a-macator 5000
 
 A personal-study tool that uses Playwright to extract transcript text from Udemy courses, then generates structured learning plans from the extracted content. Available as both a CLI and a React/Express web UI.
 

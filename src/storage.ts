@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Lecture, LectureResult, CourseMap } from './types.js';
+import { type AppLogger, consoleLogger } from './utils/logger.js';
 
 export const OUTPUT_ROOT = path.resolve('./output');
 
@@ -42,36 +43,41 @@ export function writeFile(filePath: string, content: string): void {
   fs.writeFileSync(filePath, content, 'utf-8');
 }
 
-export function saveCourseMap(courseTitle: string, courseMap: CourseMap): void {
+export function saveCourseMap(courseTitle: string, courseMap: CourseMap, logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const outPath = path.join(courseOutputDir(courseTitle), 'course-map.json');
   writeFile(outPath, JSON.stringify(courseMap, null, 2));
-  console.log(`Course map saved: ${outPath}`);
+  log.info(`Course map saved: ${outPath}`);
 }
 
-export function saveTranscriptsJson(courseTitle: string, results: LectureResult[]): void {
+export function saveTranscriptsJson(courseTitle: string, results: LectureResult[], logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const outPath = path.join(courseOutputDir(courseTitle), 'transcripts.json');
   writeFile(outPath, JSON.stringify(results, null, 2));
-  console.log(`Transcripts JSON saved: ${outPath}`);
+  log.info(`Transcripts JSON saved: ${outPath}`);
 }
 
-export function saveCombinedMarkdown(courseTitle: string, content: string): void {
+export function saveCombinedMarkdown(courseTitle: string, content: string, logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const outPath = path.join(courseOutputDir(courseTitle), 'combined-transcript.md');
   writeFile(outPath, content);
-  console.log(`Combined markdown saved: ${outPath}`);
+  log.info(`Combined markdown saved: ${outPath}`);
 }
 
-export function saveSkipped(courseTitle: string, results: LectureResult[]): void {
+export function saveSkipped(courseTitle: string, results: LectureResult[], logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const skipped = results.filter((r) => r.skipped);
   if (skipped.length === 0) return;
   const outPath = path.join(courseOutputDir(courseTitle), 'skipped.json');
   writeFile(outPath, JSON.stringify(skipped, null, 2));
-  console.log(`Skipped lectures saved: ${outPath}`);
+  log.info(`Skipped lectures saved: ${outPath}`);
 }
 
-export function saveErrors(courseTitle: string, results: LectureResult[]): void {
+export function saveErrors(courseTitle: string, results: LectureResult[], logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const errors = results.filter((r) => r.error);
   if (errors.length === 0) return;
   const outPath = path.join(courseOutputDir(courseTitle), 'errors.json');
   writeFile(outPath, JSON.stringify(errors, null, 2));
-  console.log(`Errors saved: ${outPath}`);
+  log.info(`Errors saved: ${outPath}`);
 }

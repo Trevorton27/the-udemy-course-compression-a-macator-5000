@@ -2,6 +2,7 @@ import * as path from 'path';
 import { writeFile } from '../storage.js';
 import type { CourseInventory, StudyPlan } from '../types/optimizerTypes.js';
 import { studyPlanToMarkdown } from './studyPlanGenerator.js';
+import { type AppLogger, consoleLogger } from '../utils/logger.js';
 
 const PROTECTED_FILES = ['transcripts.json', 'combined-transcript.md', 'course-map.json'];
 
@@ -64,25 +65,28 @@ function inventoryToMarkdown(inventory: CourseInventory): string {
   return lines.join('\n');
 }
 
-export function writeInventory(dir: string, inventory: CourseInventory): void {
+export function writeInventory(dir: string, inventory: CourseInventory, logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const jsonPath = path.join(dir, 'course-inventory.json');
   const mdPath = path.join(dir, 'course-inventory.md');
 
   guardedWrite(jsonPath, JSON.stringify(inventory, null, 2));
-  console.log(`Inventory JSON saved: ${jsonPath}`);
+  log.info(`Inventory JSON saved: ${jsonPath}`);
 
   guardedWrite(mdPath, inventoryToMarkdown(inventory));
-  console.log(`Inventory markdown saved: ${mdPath}`);
+  log.info(`Inventory markdown saved: ${mdPath}`);
 }
 
-export function writeOptimizedPlan(dir: string, plan: StudyPlan, courseTitle: string): void {
+export function writeOptimizedPlan(dir: string, plan: StudyPlan, courseTitle: string, logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const mdPath = path.join(dir, 'optimized-learning-plan.md');
   guardedWrite(mdPath, studyPlanToMarkdown(plan, courseTitle));
-  console.log(`Optimized plan saved: ${mdPath}`);
+  log.info(`Optimized plan saved: ${mdPath}`);
 }
 
-export function writeSelectedPlan(dir: string, plan: StudyPlan, courseTitle: string): void {
+export function writeSelectedPlan(dir: string, plan: StudyPlan, courseTitle: string, logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
   const mdPath = path.join(dir, 'selected-learning-plan.md');
   guardedWrite(mdPath, studyPlanToMarkdown(plan, courseTitle));
-  console.log(`Selected plan saved: ${mdPath}`);
+  log.info(`Selected plan saved: ${mdPath}`);
 }

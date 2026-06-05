@@ -8,18 +8,33 @@
     "optimize": "tsx src/optimize.ts",
     "scan": "tsx src/scan.ts",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "server": "tsx src/server/index.ts",
+    "ui": "vite",
+    "dev:ui": "concurrently \"tsx src/server/index.ts\" \"vite\"",
+    "build:ui": "vite build"
   },
   "dependencies": {
     "commander": "^12.1.0",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
-    "playwright": "^1.48.0"
+    "express": "^5.2.1",
+    "playwright": "^1.48.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^9.2.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.1",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vite": "^8.0.16"
   },
   "engines": {
     "node": ">=20"

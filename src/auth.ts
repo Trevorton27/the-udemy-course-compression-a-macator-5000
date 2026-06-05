@@ -3,6 +3,7 @@
 import { type Page } from 'playwright';
 import * as readline from 'readline';
 import { SELECTORS } from './types.js';
+import { type AppLogger, consoleLogger } from './utils/logger.js';
 
 const UDEMY_HOME = 'https://www.udemy.com';
 
@@ -43,7 +44,17 @@ async function isLoggedIn(page: Page): Promise<boolean> {
   return false;
 }
 
-function waitForUserConfirmation(prompt: string): Promise<string> {
+function defaultReadlineWait(): Promise<void> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question('Press ENTER after you have logged in > ', () => {
+      rl.close();
+      resolve();
+    });
+  });
+}
+
+async function waitForUserConfirmation(prompt: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     rl.question(prompt, (answer) => {
@@ -53,22 +64,28 @@ function waitForUserConfirmation(prompt: string): Promise<string> {
   });
 }
 
-export async function ensureLoggedIn(page: Page): Promise<void> {
-  console.log('Checking Udemy login status...');
+export async function ensureLoggedIn(
+  page: Page,
+  logger?: AppLogger,
+  waitForLoginConfirmation?: () => Promise<void>,
+): Promise<void> {
+  const log = logger ?? consoleLogger;
+  log.info('Checking Udemy login status...');
   await page.goto(UDEMY_HOME, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   // Give the page a moment to render dynamic login indicators
   await page.waitForTimeout(2000);
 
   if (await isLoggedIn(page)) {
-    console.log('Already logged in. Continuing.');
+    log.info('Already logged in. Continuing.');
     return;
   }
 
-  console.log('\n--- MANUAL LOGIN REQUIRED ---');
-  console.log('The browser is open. Please log into Udemy now.');
-  console.log('Once you are logged in, return here and press ENTER to continue.\n');
+  log.info('\n--- MANUAL LOGIN REQUIRED ---');
+  log.info('The browser is open. Please log into Udemy now.');
+  log.info('Once you are logged in, return here and press ENTER to continue.\n');
 
-  await waitForUserConfirmation('Press ENTER after you have logged in > ');
+  const doWait = waitForLoginConfirmation ?? defaultReadlineWait;
+  await doWait();
 
   // Let the page settle after potential navigation from login
   await page.waitForTimeout(2000);
@@ -82,16 +99,18 @@ export async function ensureLoggedIn(page: Page): Promise<void> {
   }
 
   if (await isLoggedIn(page)) {
-    console.log('Login verified. Continuing.\n');
+    log.info('Login verified. Continuing.\n');
     return;
   }
 
-  // Final fallback: ask the user to confirm manually
-  console.log('\nAutomatic login detection was inconclusive.');
-  const answer = await waitForUserConfirmation('Are you logged into Udemy in the browser? (y/n) > ');
-  if (answer === 'y' || answer === 'yes') {
-    console.log('Proceeding on your confirmation.\n');
-    return;
+  // Final fallback: ask the user to confirm manually (CLI only path)
+  if (!waitForLoginConfirmation) {
+    log.info('\nAutomatic login detection was inconclusive.');
+    const answer = await waitForUserConfirmation('Are you logged into Udemy in the browser? (y/n) > ');
+    if (answer === 'y' || answer === 'yes') {
+      log.info('Proceeding on your confirmation.\n');
+      return;
+    }
   }
 
   throw new Error(

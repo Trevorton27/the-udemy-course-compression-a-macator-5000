@@ -1,3 +1,7 @@
+import type { CourseLibraryEntry, FailedLecture } from './types';
+
+export type { CourseLibraryEntry, FailedLecture };
+
 export interface JobSnapshot {
   id: string;
   status: 'pending' | 'running' | 'waiting-for-login' | 'complete' | 'failed';
@@ -20,12 +24,25 @@ export async function submitScrapeJob(url: string, mode: string): Promise<{ jobI
 export async function submitOptimizeJob(
   transcriptsPath: string,
   mode: string,
-  criteria?: { sections?: string[]; technologies?: string[]; keyword?: string },
+  criteria?: { sections?: string[]; technologies?: string[]; keyword?: string; lectures?: string[] },
 ): Promise<{ jobId: string }> {
   const res = await fetch('/api/jobs/optimize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ transcriptsPath, mode, criteria }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function retryLectures(
+  transcriptsPath: string,
+  lectures: FailedLecture[],
+): Promise<{ jobId: string }> {
+  const res = await fetch('/api/jobs/retry-lectures', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transcriptsPath, lectures }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -46,4 +63,22 @@ export async function getJobFiles(jobId: string): Promise<{ files: string[] }> {
   const res = await fetch(`/api/jobs/${jobId}/files`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+export async function getFileContent(relPath: string): Promise<string> {
+  const res = await fetch(`/api/files/content?path=${encodeURIComponent(relPath)}`);
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json() as { content: string };
+  return data.content;
+}
+
+export async function getLibrary(): Promise<{ entries: CourseLibraryEntry[] }> {
+  const res = await fetch('/api/library');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteFromLibrary(id: string): Promise<void> {
+  const res = await fetch(`/api/library/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(await res.text());
 }

@@ -8,6 +8,7 @@ const MODES = [
   { value: 'scan', label: 'Extract + scan (inventory)' },
   { value: 'optimize-all', label: 'Extract + optimize all' },
   { value: 'optimize-selected', label: 'Extract + select sections, then optimize' },
+  { value: 'optimize-build-first', label: 'Extract + build-first optimize' },
 ];
 
 export default function ModeSelector({ value, onChange }: Props) {

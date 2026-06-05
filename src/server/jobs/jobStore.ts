@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { ServerResponse } from 'http';
 import type { LogEvent } from '../../utils/logger.js';
+import type { FailedLecture } from '../../types/optimizerTypes.js';
 
 export type JobStatus = 'pending' | 'running' | 'waiting-for-login' | 'complete' | 'failed';
 
@@ -18,10 +19,17 @@ export interface OptimizeJobParams {
     sections?: string[];
     technologies?: string[];
     keyword?: string;
+    lectures?: string[];
   };
 }
 
-export type JobParams = ScrapeJobParams | OptimizeJobParams;
+export interface RetryJobParams {
+  type: 'retry';
+  transcriptsPath: string;
+  lectures: FailedLecture[];
+}
+
+export type JobParams = ScrapeJobParams | OptimizeJobParams | RetryJobParams;
 
 export interface Job {
   id: string;

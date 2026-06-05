@@ -2,6 +2,7 @@ import * as path from 'path';
 import { writeFile } from '../storage.js';
 import type { CourseInventory, StudyPlan } from '../types/optimizerTypes.js';
 import { studyPlanToMarkdown } from './studyPlanGenerator.js';
+import { buildFirstPlanToMarkdown } from './buildFirstPlanGenerator.js';
 import { type AppLogger, consoleLogger } from '../utils/logger.js';
 
 const PROTECTED_FILES = ['transcripts.json', 'combined-transcript.md', 'course-map.json'];
@@ -89,4 +90,11 @@ export function writeSelectedPlan(dir: string, plan: StudyPlan, courseTitle: str
   const mdPath = path.join(dir, 'selected-learning-plan.md');
   guardedWrite(mdPath, studyPlanToMarkdown(plan, courseTitle));
   log.info(`Selected plan saved: ${mdPath}`);
+}
+
+export function writeBuildFirstPlan(dir: string, plan: StudyPlan, courseTitle: string, logger?: AppLogger): void {
+  const log = logger ?? consoleLogger;
+  const mdPath = path.join(dir, 'build-first-plan.md');
+  guardedWrite(mdPath, buildFirstPlanToMarkdown(plan, courseTitle));
+  log.info(`Build-first plan saved: ${mdPath}`);
 }

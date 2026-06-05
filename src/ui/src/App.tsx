@@ -1,12 +1,23 @@
 import { useState, useCallback, useEffect } from 'react';
+import AppHeader from './components/AppHeader';
 import CourseUrlForm from './components/CourseUrlForm';
-import ProgressStatus from './components/ProgressStatus';
-import ExtractionLogPanel from './components/ExtractionLogPanel';
-import OutputFilesPanel from './components/OutputFilesPanel';
-import CourseInventorySelector from './components/CourseInventorySelector';
-import { submitScrapeJob, getJob } from './api';
+import JobView from './components/JobView';
+import CourseDashboard from './components/CourseDashboard';
+import CourseMapView from './components/CourseMapView';
+import LectureSelector from './components/LectureSelector';
+import StudyPlanPreview from './components/StudyPlanPreview';
+import ErrorRecoveryPanel from './components/ErrorRecoveryPanel';
+import CourseLibraryPanel from './components/CourseLibrary';
+import { submitScrapeJob, submitOptimizeJob, getJob } from './api';
+import { useJobProgress } from './hooks/useJobProgress';
+import type {
+  DashboardData,
+  CourseInventory,
+  LectureResult,
+  CourseLibraryEntry,
+} from './types';
 
-type View = 'home' | 'job';
+type View = 'home' | 'job' | 'dashboard' | 'course-map' | 'study-plan' | 'selector' | 'library';
 
 interface JobState {
   id: string;
@@ -15,22 +26,35 @@ interface JobState {
   mode: string;
 }
 
-// Inventory shape returned from /api/files/download?path=.../course-inventory.json
-interface CourseInventory {
-  courseTitle: string;
-  sections: Array<{ title: string; sectionIndex: number }>;
-  technologies: string[];
-}
-
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [view, setView] = useState<View>('home');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [job, setJob] = useState<JobState | null>(null);
-  const [inventory, setInventory] = useState<CourseInventory | null>(null);
+
+  // Dashboard state
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardOutputFiles, setDashboardOutputFiles] = useState<string[]>([]);
+  const [errorFilePath, setErrorFilePath] = useState('');
   const [transcriptsPath, setTranscriptsPath] = useState('');
 
+  // Course map state
+  const [courseMapInventory, setCourseMapInventory] = useState<CourseInventory | null>(null);
+  const [transcriptStatus, setTranscriptStatus] = useState<Map<number, 'ok' | 'skipped' | 'error'>>(new Map());
+
+  // Selector state
+  const [selectorInventory, setSelectorInventory] = useState<CourseInventory | null>(null);
+  const [selectorTranscriptsPath, setSelectorTranscriptsPath] = useState('');
+
+  // Study plan state
+  const [studyPlanPaths, setStudyPlanPaths] = useState<string[]>([]);
+  const [studyPlanCourseTitle, setStudyPlanCourseTitle] = useState('');
+
+  // Progress timeline (second EventSource to same endpoint)
+  const progress = useJobProgress(job?.id ?? null);
+
+  // Apply dark mode CSS variables
   useEffect(() => {
     const root = document.documentElement;
     const vars = darkMode
@@ -67,68 +91,205 @@ export default function App() {
     }
   }
 
+  async function loadDashboard(files: string[]) {
+    const inventoryFile = files.find((f) => f.endsWith('course-inventory.json'));
+    const transcriptsFile = files.find((f) => f.endsWith('transcripts.json'));
+    if (!inventoryFile || !transcriptsFile) return false;
+
+    const [invRes, transRes] = await Promise.all([
+      fetch(`/api/files/download?path=${encodeURIComponent(inventoryFile)}`),
+      fetch(`/api/files/download?path=${encodeURIComponent(transcriptsFile)}`),
+    ]);
+
+    if (!invRes.ok || !transRes.ok) return false;
+
+    const inventory = await invRes.json() as CourseInventory;
+    const results = await transRes.json() as LectureResult[];
+
+    const tCount = results.filter((r) => !r.skipped && !r.error && r.rows.length > 0).length;
+    const sCount = results.filter((r) => r.skipped).length;
+    const fCount = results.filter((r) => !!r.error).length;
+
+    const classificationCounts = { build: 0, watch: 0, skim: 0, skip: 0 };
+    for (const section of inventory.sections) {
+      for (const lec of section.lectures) {
+        if (lec.classification in classificationCounts) {
+          classificationCounts[lec.classification]++;
+        }
+      }
+    }
+
+    const planPaths = files.filter(
+      (f) => f.endsWith('-learning-plan.md') || f.endsWith('-plan.md'),
+    );
+
+    const outputDir = inventoryFile.split('/').slice(0, -1).join('/');
+    const errFile = files.find((f) => f.endsWith('errors.json')) ?? '';
+
+    setDashboardData({
+      courseTitle: inventory.courseTitle,
+      totalSections: inventory.sections.length,
+      totalLectures: results.length,
+      transcriptCount: tCount,
+      skippedCount: sCount,
+      failedCount: fCount,
+      technologies: inventory.technologies,
+      classificationCounts,
+      outputDir,
+      hasErrors: fCount > 0,
+      errorCount: fCount,
+      availablePlanPaths: planPaths,
+    });
+    setDashboardOutputFiles(files);
+    setTranscriptsPath(transcriptsFile);
+    setErrorFilePath(errFile);
+    setCourseMapInventory(inventory);
+
+    const statusMap = new Map<number, 'ok' | 'skipped' | 'error'>();
+    for (const r of results) {
+      if (r.error) statusMap.set(r.lecture.index, 'error');
+      else if (r.skipped) statusMap.set(r.lecture.index, 'skipped');
+      else statusMap.set(r.lecture.index, 'ok');
+    }
+    setTranscriptStatus(statusMap);
+
+    return true;
+  }
+
   const handleDone = useCallback(async () => {
     if (!job) return;
     try {
       const snapshot = await getJob(job.id);
-      setJob((prev) => prev ? { ...prev, status: snapshot.status, outputFiles: snapshot.outputFiles } : prev);
+      const files = snapshot.outputFiles;
+      setJob((prev) => prev ? { ...prev, status: snapshot.status, outputFiles: files } : prev);
 
-      // If this was an optimize-selected scrape, load the inventory for selection UI
-      if (snapshot.params.mode === 'optimize-selected' && snapshot.status === 'complete') {
-        const inventoryFile = snapshot.outputFiles.find((f) => f.endsWith('course-inventory.json'));
-        if (inventoryFile) {
-          const res = await fetch(`/api/files/download?path=${encodeURIComponent(inventoryFile)}`);
-          if (res.ok) {
-            const inv = await res.json() as CourseInventory;
-            setInventory(inv);
-            const tFile = snapshot.outputFiles.find((f) => f.endsWith('transcripts.json'));
-            if (tFile) setTranscriptsPath(tFile);
-          }
+      if (snapshot.status === 'complete') {
+        const hasInventory = files.some((f) => f.endsWith('course-inventory.json'));
+        if (hasInventory) {
+          const ok = await loadDashboard(files);
+          if (ok) setView('dashboard');
         }
       }
     } catch {
       // best effort
     }
-  }, [job]);
+  }, [job]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleLoginConfirmed() {
     setJob((prev) => prev ? { ...prev, status: 'running' } : prev);
   }
 
   function handleOptimizeJobStarted(jobId: string) {
-    setInventory(null);
     setJob({ id: jobId, status: 'pending', outputFiles: [], mode: 'selected' });
+    setView('job');
+    setSelectorInventory(null);
+  }
+
+  function handleRetryStarted(jobId: string) {
+    setJob({ id: jobId, status: 'pending', outputFiles: [], mode: 'retry' });
+    setDashboardData(null);
+    setView('job');
+  }
+
+  function handleOpenCourseMap() {
+    if (courseMapInventory) setView('course-map');
+  }
+
+  function handleOpenStudyPlan() {
+    if (dashboardData && dashboardData.availablePlanPaths.length > 0) {
+      setStudyPlanPaths(dashboardData.availablePlanPaths);
+      setStudyPlanCourseTitle(dashboardData.courseTitle);
+      setView('study-plan');
+    }
+  }
+
+  function handleOpenSelector() {
+    if (courseMapInventory && transcriptsPath) {
+      setSelectorInventory(courseMapInventory);
+      setSelectorTranscriptsPath(transcriptsPath);
+      setView('selector');
+    }
+  }
+
+  async function handleLibraryOpenDashboard(entry: CourseLibraryEntry) {
+    const baseFiles = [
+      `${entry.id}/course-inventory.json`,
+      `${entry.id}/transcripts.json`,
+      entry.hasOptimizedPlan ? `${entry.id}/optimized-learning-plan.md` : null,
+      entry.hasSelectedPlan ? `${entry.id}/selected-learning-plan.md` : null,
+      entry.hasBuildFirstPlan ? `${entry.id}/build-first-plan.md` : null,
+      entry.failedCount > 0 ? `${entry.id}/errors.json` : null,
+    ].filter(Boolean) as string[];
+
+    const ok = await loadDashboard(baseFiles);
+    if (ok) setView('dashboard');
+  }
+
+  async function handleLibraryOpenCourseMap(entry: CourseLibraryEntry) {
+    const [invRes, transRes] = await Promise.all([
+      fetch(`/api/files/download?path=${encodeURIComponent(`${entry.id}/course-inventory.json`)}`),
+      fetch(`/api/files/download?path=${encodeURIComponent(`${entry.id}/transcripts.json`)}`),
+    ]);
+    if (!invRes.ok || !transRes.ok) return;
+    const inventory = await invRes.json() as CourseInventory;
+    const results = await transRes.json() as LectureResult[];
+
+    const statusMap = new Map<number, 'ok' | 'skipped' | 'error'>();
+    for (const r of results) {
+      if (r.error) statusMap.set(r.lecture.index, 'error');
+      else if (r.skipped) statusMap.set(r.lecture.index, 'skipped');
+      else statusMap.set(r.lecture.index, 'ok');
+    }
+
+    setCourseMapInventory(inventory);
+    setTranscriptStatus(statusMap);
+    setTranscriptsPath(`${entry.id}/transcripts.json`);
+    setSelectorInventory(inventory);
+    setSelectorTranscriptsPath(`${entry.id}/transcripts.json`);
+    setView('course-map');
+  }
+
+  async function handleLibraryReoptimize(entry: CourseLibraryEntry) {
+    try {
+      const { jobId } = await submitOptimizeJob(
+        `${entry.id}/transcripts.json`,
+        'optimize-all',
+      );
+      setJob({ id: jobId, status: 'pending', outputFiles: [], mode: 'optimize-all' });
+      setView('job');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif', color: 'var(--text)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
-        <div>
-          <h1 style={{ fontSize: 24, marginBottom: 4, marginTop: 0 }}>The Udemy Course Compression-a-macator 5000</h1>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-            Extract, scan, and optimize Udemy course transcripts.
-          </p>
-        </div>
-        <button
-          onClick={() => setDarkMode((d) => !d)}
-          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          style={{
-            background: 'none',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '6px 14px',
-            cursor: 'pointer',
-            fontSize: 13,
-            color: 'var(--text)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {darkMode ? '☀ Light' : '☾ Dark'}
-        </button>
-      </div>
+    <div
+      style={{
+        maxWidth: 860,
+        margin: '40px auto',
+        padding: '0 20px',
+        fontFamily: 'system-ui, sans-serif',
+        color: 'var(--text)',
+      }}
+    >
+      <AppHeader
+        darkMode={darkMode}
+        onToggleDark={() => setDarkMode((d) => !d)}
+        onGoLibrary={() => setView('library')}
+        onGoHome={() => { setView('home'); setJob(null); setDashboardData(null); }}
+      />
 
       {error && (
-        <div style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: 4, padding: '10px 14px', marginBottom: 20, color: 'var(--error-text)' }}>
+        <div
+          style={{
+            background: 'var(--error-bg)',
+            border: '1px solid var(--error-border)',
+            borderRadius: 4,
+            padding: '10px 14px',
+            marginBottom: 20,
+            color: 'var(--error-text)',
+          }}
+        >
           {error}
         </div>
       )}
@@ -138,35 +299,94 @@ export default function App() {
       )}
 
       {view === 'job' && job && (
+        <JobView
+          job={job}
+          progress={progress}
+          onDone={handleDone}
+          onLoginConfirmed={handleLoginConfirmed}
+          onNewJob={() => { setView('home'); setJob(null); }}
+        />
+      )}
+
+      {view === 'dashboard' && dashboardData && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <ProgressStatus
-              status={job.status}
-              jobId={job.id}
-              onLoginConfirmed={handleLoginConfirmed}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <button
-              onClick={() => { setView('home'); setJob(null); setInventory(null); }}
-              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '4px 12px', cursor: 'pointer', color: 'var(--text)' }}
+              onClick={() => setView('home')}
+              style={{
+                background: 'none', border: '1px solid var(--border)',
+                borderRadius: 4, padding: '4px 12px', cursor: 'pointer', color: 'var(--text)',
+              }}
             >
-              New job
+              ← New job
             </button>
           </div>
-
-          <h3 style={{ margin: '0 0 4px' }}>Live Log</h3>
-          <ExtractionLogPanel jobId={job.id} onDone={handleDone} />
-
-          <OutputFilesPanel files={job.outputFiles} />
-
-          {inventory && transcriptsPath && (
-            <div style={{ marginTop: 28, padding: 20, border: '1px solid var(--section-border)', borderRadius: 8 }}>
-              <CourseInventorySelector
-                transcriptsPath={transcriptsPath}
-                inventory={inventory}
-                onJobStarted={handleOptimizeJobStarted}
-              />
-            </div>
+          <CourseDashboard
+            data={dashboardData}
+            outputFiles={dashboardOutputFiles}
+            onOpenCourseMap={handleOpenCourseMap}
+            onOpenStudyPlan={handleOpenStudyPlan}
+            onOpenSelector={handleOpenSelector}
+            onRetryErrors={() => {}}
+          />
+          {dashboardData.hasErrors && errorFilePath && (
+            <ErrorRecoveryPanel
+              errorFilePath={errorFilePath}
+              transcriptsPath={transcriptsPath}
+              onRetryStarted={handleRetryStarted}
+            />
           )}
+        </div>
+      )}
+
+      {view === 'course-map' && courseMapInventory && (
+        <CourseMapView
+          inventory={courseMapInventory}
+          transcriptStatus={transcriptStatus}
+          onBack={() => dashboardData ? setView('dashboard') : setView('home')}
+          onOpenSelector={handleOpenSelector}
+        />
+      )}
+
+      {view === 'selector' && selectorInventory && selectorTranscriptsPath && (
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => dashboardData ? setView('dashboard') : setView('home')}
+              style={{
+                background: 'none', border: '1px solid var(--border)',
+                borderRadius: 4, padding: '4px 12px', cursor: 'pointer', color: 'var(--text)',
+              }}
+            >
+              ← Back
+            </button>
+          </div>
+          <LectureSelector
+            transcriptsPath={selectorTranscriptsPath}
+            inventory={selectorInventory}
+            onJobStarted={handleOptimizeJobStarted}
+          />
+        </div>
+      )}
+
+      {view === 'study-plan' && (
+        <StudyPlanPreview
+          planPaths={studyPlanPaths}
+          courseTitle={studyPlanCourseTitle}
+          onBack={() => dashboardData ? setView('dashboard') : setView('home')}
+        />
+      )}
+
+      {view === 'library' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <h2 style={{ margin: 0, fontSize: 20 }}>Course Library</h2>
+          </div>
+          <CourseLibraryPanel
+            onOpenDashboard={handleLibraryOpenDashboard}
+            onOpenCourseMap={handleLibraryOpenCourseMap}
+            onReoptimize={handleLibraryReoptimize}
+          />
         </div>
       )}
     </div>

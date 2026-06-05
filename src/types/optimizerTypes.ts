@@ -43,6 +43,16 @@ export interface StudyPlan {
   technologies: string[];
   dailyPlan: string[];
   projectWorkflow: string[];
+  mode?: 'standard' | 'build-first';
+}
+
+export interface FailedLecture {
+  lectureIndex: number;
+  title: string;
+  url: string;
+  sectionTitle: string;
+  sectionIndex: number;
+  error: string;
 }
 
 export interface SelectionCriteria {

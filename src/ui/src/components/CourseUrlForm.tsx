@@ -25,6 +25,10 @@ const MODE_DESCRIPTIONS = [
     label: 'Extract + select sections, then optimize',
     description: 'Runs extraction and scan, then pauses so you can pick which sections, technologies, or keywords you care about. A second pass then generates a targeted selected-learning-plan.md based on your selections.',
   },
+  {
+    label: 'Extract + build-first optimize',
+    description: 'Everything in scan, then generates a build-first study plan that prioritizes all hands-on build lectures before watch lectures. Intro, outro, and bonus lectures are automatically moved to skip. Outputs a build-first-plan.md.',
+  },
 ];
 
 function ModesModal({ onClose }: { onClose: () => void }) {

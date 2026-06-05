@@ -12,7 +12,7 @@ const MODES = [
 
 export default function ModeSelector({ value, onChange }: Props) {
   return (
-    <fieldset style={{ border: '1px solid #ccc', borderRadius: 6, padding: '12px 16px' }}>
+    <fieldset style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '12px 16px' }}>
       <legend style={{ fontWeight: 600 }}>Mode</legend>
       {MODES.map((m) => (
         <label key={m.value} style={{ display: 'block', margin: '6px 0', cursor: 'pointer' }}>

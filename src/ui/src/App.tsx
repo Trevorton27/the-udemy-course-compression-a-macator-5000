@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import CourseUrlForm from './components/CourseUrlForm';
 import ProgressStatus from './components/ProgressStatus';
 import ExtractionLogPanel from './components/ExtractionLogPanel';
@@ -23,12 +23,35 @@ interface CourseInventory {
 }
 
 export default function App() {
+  const [darkMode, setDarkMode] = useState(false);
   const [view, setView] = useState<View>('home');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [job, setJob] = useState<JobState | null>(null);
   const [inventory, setInventory] = useState<CourseInventory | null>(null);
   const [transcriptsPath, setTranscriptsPath] = useState('');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const vars = darkMode
+      ? {
+          '--bg': '#121212', '--surface': '#1e1e1e', '--text': '#e8e8e8',
+          '--text-muted': '#999', '--border': '#555', '--accent': '#4d9ef7',
+          '--accent-subtle': '#1a3360', '--error-bg': '#3b1a1a',
+          '--error-border': '#8b3535', '--error-text': '#ff8a8a',
+          '--section-border': '#333', '--input-bg': '#2a2a2a',
+        }
+      : {
+          '--bg': '#fff', '--surface': '#fff', '--text': '#222',
+          '--text-muted': '#666', '--border': '#ccc', '--accent': '#1a73e8',
+          '--accent-subtle': '#e8f0fe', '--error-bg': '#ffebee',
+          '--error-border': '#ef9a9a', '--error-text': '#c62828',
+          '--section-border': '#e0e0e0', '--input-bg': '#fff',
+        };
+    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+    document.body.style.background = darkMode ? '#121212' : '#fff';
+    document.body.style.color = darkMode ? '#e8e8e8' : '#222';
+  }, [darkMode]);
 
   async function handleStart(url: string, mode: string) {
     setLoading(true);
@@ -78,14 +101,34 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Udemy Transcriptamacator 5000</h1>
-      <p style={{ color: '#666', marginTop: 0, marginBottom: 32 }}>
-        Extract, scan, and optimize Udemy course transcripts.
-      </p>
+    <div style={{ maxWidth: 860, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif', color: 'var(--text)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+        <div>
+          <h1 style={{ fontSize: 24, marginBottom: 4, marginTop: 0 }}>The Udemy Course Compression-a-macator 5000</h1>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+            Extract, scan, and optimize Udemy course transcripts.
+          </p>
+        </div>
+        <button
+          onClick={() => setDarkMode((d) => !d)}
+          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          style={{
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            padding: '6px 14px',
+            cursor: 'pointer',
+            fontSize: 13,
+            color: 'var(--text)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {darkMode ? '☀ Light' : '☾ Dark'}
+        </button>
+      </div>
 
       {error && (
-        <div style={{ background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 4, padding: '10px 14px', marginBottom: 20, color: '#c62828' }}>
+        <div style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: 4, padding: '10px 14px', marginBottom: 20, color: 'var(--error-text)' }}>
           {error}
         </div>
       )}
@@ -104,7 +147,7 @@ export default function App() {
             />
             <button
               onClick={() => { setView('home'); setJob(null); setInventory(null); }}
-              style={{ background: 'none', border: '1px solid #ccc', borderRadius: 4, padding: '4px 12px', cursor: 'pointer' }}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '4px 12px', cursor: 'pointer', color: 'var(--text)' }}
             >
               New job
             </button>
@@ -116,7 +159,7 @@ export default function App() {
           <OutputFilesPanel files={job.outputFiles} />
 
           {inventory && transcriptsPath && (
-            <div style={{ marginTop: 28, padding: 20, border: '1px solid #e0e0e0', borderRadius: 8 }}>
+            <div style={{ marginTop: 28, padding: 20, border: '1px solid var(--section-border)', borderRadius: 8 }}>
               <CourseInventorySelector
                 transcriptsPath={transcriptsPath}
                 inventory={inventory}

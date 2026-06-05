@@ -14,7 +14,7 @@ export default function OutputFilesPanel({ files }: Props) {
             <a
               href={`/api/files/download?path=${encodeURIComponent(f)}`}
               download
-              style={{ color: '#1a73e8', textDecoration: 'none', fontFamily: 'monospace', fontSize: 13 }}
+              style={{ color: 'var(--accent)', textDecoration: 'none', fontFamily: 'monospace', fontSize: 13 }}
             >
               {f}
             </a>

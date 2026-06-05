@@ -91,11 +91,12 @@ export default function CourseInventorySelector({ transcriptsPath, inventory, on
                   alignItems: 'center',
                   gap: 6,
                   padding: '4px 10px',
-                  border: `1px solid ${selectedTechs.has(tech) ? '#1a73e8' : '#ccc'}`,
+                  border: `1px solid ${selectedTechs.has(tech) ? 'var(--accent)' : 'var(--border)'}`,
                   borderRadius: 16,
                   cursor: 'pointer',
                   fontSize: 13,
-                  background: selectedTechs.has(tech) ? '#e8f0fe' : 'transparent',
+                  background: selectedTechs.has(tech) ? 'var(--accent-subtle)' : 'transparent',
+                  color: 'var(--text)',
                 }}
               >
                 <input
@@ -118,7 +119,7 @@ export default function CourseInventorySelector({ transcriptsPath, inventory, on
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="e.g. docker, authentication, testing"
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 4, border: '1px solid #ccc', boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 4, border: '1px solid var(--border)', boxSizing: 'border-box', background: 'var(--input-bg)', color: 'var(--text)' }}
         />
       </div>
 
@@ -127,7 +128,7 @@ export default function CourseInventorySelector({ transcriptsPath, inventory, on
         disabled={loading}
         style={{
           padding: '10px 24px',
-          background: loading ? '#aaa' : '#1a73e8',
+          background: loading ? '#aaa' : 'var(--accent)',
           color: '#fff',
           border: 'none',
           borderRadius: 4,

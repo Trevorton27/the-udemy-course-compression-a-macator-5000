@@ -80,6 +80,7 @@ export function buildLibraryEntryFromDir(
   const hasOptimizedPlan = fs.existsSync(path.join(outputDir, 'optimized-learning-plan.md'));
   const hasSelectedPlan = fs.existsSync(path.join(outputDir, 'selected-learning-plan.md'));
   const hasBuildFirstPlan = fs.existsSync(path.join(outputDir, 'build-first-plan.md'));
+  const hasAiPlan = fs.existsSync(path.join(outputDir, 'ai-learning-plan.json'));
 
   return {
     id,
@@ -96,5 +97,6 @@ export function buildLibraryEntryFromDir(
     hasOptimizedPlan,
     hasSelectedPlan,
     hasBuildFirstPlan,
+    hasAiPlan,
   };
 }

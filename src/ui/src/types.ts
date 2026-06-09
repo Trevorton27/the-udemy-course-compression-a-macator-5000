@@ -24,6 +24,7 @@ export interface CourseLibraryEntry {
   hasOptimizedPlan: boolean;
   hasSelectedPlan: boolean;
   hasBuildFirstPlan: boolean;
+  hasAiPlan: boolean;
 }
 
 export interface InventoryLecture {
@@ -80,4 +81,67 @@ export interface DashboardData {
   hasErrors: boolean;
   errorCount: number;
   availablePlanPaths: string[];
+  hasAiPlan: boolean;
+  aiPlanPath: string;
+}
+
+// ─── AI plan types (mirrored from src/types/aiTypes.ts) ───────────────────────
+
+export interface LectureAnalysis {
+  lectureIndex: number;
+  title: string;
+  concepts: string[];
+  codeTopics: string[];
+  watchValue: 1 | 2 | 3 | 4 | 5;
+  canBeReplaced: string | null;
+  summary: string;
+}
+
+export interface ConceptNode {
+  concept: string;
+  dependsOn: string[];
+  taughtIn: number[];
+}
+
+export interface RedundancyCluster {
+  concept: string;
+  keepLecture: number;
+  skipLectures: number[];
+  reason: string;
+}
+
+export interface LearningPhase {
+  phase: string;
+  goal: string;
+  lectures: number[];
+  activeTasks: string[];
+}
+
+export interface ProjectDeliverable {
+  title: string;
+  description: string;
+  requiredConcepts: string[];
+  estimatedHours: number;
+}
+
+export interface AiCourseSynthesis {
+  conceptGraph: ConceptNode[];
+  redundancyClusters: RedundancyCluster[];
+  compressedPath: LearningPhase[];
+  projectDeliverables: ProjectDeliverable[];
+  skipList: { lectureIndex: number; reason: string }[];
+  totalHoursOriginal: number;
+  totalHoursOptimized: number;
+  compressionRatio: number;
+  executiveSummary: string;
+}
+
+export interface AiLearningPlan {
+  courseTitle: string;
+  generatedAt: string;
+  model: string;
+  transcriptsHash: string;
+  focusPrompt?: string;
+  lectureAnalyses: LectureAnalysis[];
+  synthesis: AiCourseSynthesis;
 }

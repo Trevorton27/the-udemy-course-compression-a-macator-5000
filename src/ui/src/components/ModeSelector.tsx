@@ -9,6 +9,7 @@ const MODES = [
   { value: 'optimize-all', label: 'Extract + optimize all' },
   { value: 'optimize-selected', label: 'Extract + select sections, then optimize' },
   { value: 'optimize-build-first', label: 'Extract + build-first optimize' },
+  { value: 'optimize-ai', label: 'Extract + AI-powered optimization (Claude)' },
 ];
 
 export default function ModeSelector({ value, onChange }: Props) {

@@ -1,21 +1,46 @@
-# The Udemy Course Compression-a-macator 5000
+# The Udemy Course Compress-a-macator 5000
 
-A personal-study tool that uses Playwright to extract transcript text from Udemy courses, then generates structured learning plans from the extracted content. Available as both a CLI and a React/Express web UI.
+> *"Folks, have I got a deal for YOU today!"*
 
-**Output:** Local Markdown + JSON files. No video, no audio, no API interception — only reads visible text shown to logged-in users.
+Step right up, step right UP, ladies and gentlemen, and feast your eyes on the MARVEL of the modern age — **The Udemy Course Compress-a-macator 5000!** That's right, friend, while your neighbors are sitting through FORTY hours of video content, YOU could be blazing through a surgically compressed learning path in a FRACTION of the time!
+
+She scrapes! She scans! She OPTIMIZES! And if you call in the next ten minutes, she'll even generate you an AI-powered study plan courtesy of Claude himself!
+
+But wait — **THERE'S MORE.**
 
 ---
 
-## Legal / Ethical Notice
+## ⚠️ Now Hold Your Horses, Partner — Read This First
 
-Intended for **personal study use only** on courses you are authorized to access. It reads only what a logged-in user can see in the browser. Do not use it to redistribute course content or to access content you have not purchased.
+*[Salesman lowers voice to a conspiratorial whisper]*
+
+Listen here. This machine works exclusively on courses **you have purchased and are fully authorized to access**. We're talking logged-in, paid-up, card-on-file Udemy access. This beauty reads only what a logged-in user can already see in their own browser — visible text, nothing more.
+
+Do NOT use this to access content you haven't purchased. Do NOT redistribute course content. This is a **personal study tool**, built for the sole purpose of helping YOU — yes, YOU, the busy go-getter — make the most of courses you've already paid good money for.
+
+Violate that, and frankly, you deserve whatever comes next. *We don't make the rules, we just live by them.*
+
+---
+
+## 🎰 RESULTS MAY VARY, FRIEND — AND HERE'S WHY
+
+*[Host gestures dramatically at fine print]*
+
+Now I want to be straight with you, because that's the kind of honest, trustworthy operation we run here at Compress-a-macator Industries. Udemy — bless their hearts — has a DOM structure that changes with the seasons. The sidebar, the transcript panel, the curriculum items... they can and DO shift around like furniture in a haunted house.
+
+**If this machine starts acting up — clicking on things that ain't there, missing lectures, coming back empty-handed — you're going to want a coding LLM on speed dial.** Your Claude Code, your Cursor, your Copilot — whichever digital assistant you keep in your back pocket. Because when Udemy updates their front-end and suddenly `[data-purpose="curriculum-item-6-0"]` doesn't exist anymore, you're going to need to pop open Chrome DevTools and update a selector or two in `src/types.ts`.
+
+It ain't a bug. It's just the nature of the beast. All selectors live right there in the `SELECTORS` object — they're fallback arrays, so you just add your new one at the front and you're back in business, slick as a whistle.
+
+*Works best locally. Has absolutely no business being anywhere near a server, a Docker container, or your company's CI pipeline.*
 
 ---
 
 ## Requirements
 
 - Node.js 20+
-- A Udemy account with access to the course you want to extract
+- A Udemy account with **legitimate, purchased access** to the course you want to extract
+- A coding LLM on standby for when Udemy inevitably redecorates their DOM *(see above)*
 
 ---
 
@@ -36,10 +61,41 @@ cp .env.example .env
 
 | Variable | Default | Description |
 |---|---|---|
-| `UDEMY_PROFILE_DIR` | `./browser-profile` | Path to store Chromium persistent profile (keeps login between runs) |
+| `UDEMY_PROFILE_DIR` | `./browser-profile` | Chromium persistent profile path (keeps you logged in between runs) |
 | `DELAY_MIN_MS` | `1500` | Minimum polite delay between lectures (ms) |
 | `DELAY_MAX_MS` | `3500` | Maximum polite delay between lectures (ms) |
 | `PORT` | `3001` | Express API server port |
+| `ANTHROPIC_API_KEY` | *(none)* | Required for AI-powered optimization mode only |
+
+---
+
+## Web UI — The Star of the Show!
+
+*"She's a BEAUT, Clark."*
+
+```bash
+npm run dev:ui
+```
+
+Point your browser at **http://localhost:5173** and behold the full Compress-a-macator experience:
+
+- **UI:** http://localhost:5173
+- **API:** http://localhost:3001
+
+### Extraction Modes
+
+| Mode | What She Does |
+|---|---|
+| `scrape` | Raw transcript extraction — pure, uncut knowledge |
+| `scan` | Extraction + course inventory with topic classification |
+| `optimize-all` | The full monty — extract, scan, and generate an optimized study plan |
+| `optimize-selected` | Two-pass: extract and scan, then YOU pick which sections matter |
+| `optimize-build-first` | Build-first ordering — all hands-on lectures before the theory |
+| `optimize-ai` | **THE GRAND FINALE** — Claude analyzes every lecture and synthesizes a compressed learning path *(requires `ANTHROPIC_API_KEY`)* |
+
+### Login Flow
+
+First run opens a Chromium window. Log in manually, then hit **"Confirm Login"** in the UI. Subsequent runs remember your session automatically. *Like a good neighbor, Chromium is there.*
 
 ---
 
@@ -51,174 +107,16 @@ cp .env.example .env
 npm run scrape -- "https://www.udemy.com/course/your-course-slug/"
 ```
 
-On first run a headed Chromium window opens. Log in manually in the browser, then press **Enter** in the terminal. Subsequent runs use the stored browser profile and log in automatically.
-
-Use `--overwrite` / `--force` to re-extract lectures that already have output files.
-
-### Scan (inventory only — no scraping)
-
-Builds a course inventory from an existing `transcripts.json` without re-scraping:
+### Scan (inventory from existing transcripts)
 
 ```bash
 npm run scan -- output/Course-Title/transcripts.json
 ```
 
-Outputs `course-inventory.json` and `course-inventory.md`.
-
 ### Optimize (generate study plan)
-
-Generates an optimized learning plan from an existing `transcripts.json`:
 
 ```bash
 npm run optimize -- output/Course-Title/transcripts.json
-```
-
-Outputs `optimized-learning-plan.md` with lectures classified as **build**, **watch**, **skim**, or **skip** based on content signals.
-
----
-
-## Web UI
-
-Start the Express API and Vite dev server together:
-
-```bash
-npm run dev:ui
-```
-
-- **UI:** http://localhost:5173
-- **API:** http://localhost:3001
-
-Or run them separately:
-
-```bash
-npm run server   # Express API only (port 3001)
-npm run ui       # Vite dev server only (port 5173)
-```
-
-Build the UI for production:
-
-```bash
-npm run build:ui   # outputs to dist-ui/
-```
-
-### Scrape modes (via UI)
-
-| Mode | Description |
-|---|---|
-| `scrape` | Extract transcripts only |
-| `scan` | Extract transcripts + build course inventory |
-| `optimize-all` | Extract + inventory + full optimized learning plan |
-| `optimize-selected` | Two-step: extract + inventory, then user selects sections/topics for a targeted plan |
-
-### Login flow (UI)
-
-When the browser needs login the job pauses with status `waiting-for-login`. The UI displays a **"Confirm Login"** button. Log in inside the Chromium window, then click the button — the job resumes automatically.
-
-### Real-time log streaming
-
-All job output streams to the UI in real time via **Server-Sent Events** (SSE). Logs are also buffered server-side, so reconnecting replays the full history.
-
----
-
-## Backend API Reference
-
-Base URL: `http://localhost:3001`
-
-### Jobs
-
-#### `POST /api/jobs/scrape`
-
-Start a scrape job.
-
-**Body:**
-```json
-{
-  "url": "https://www.udemy.com/course/your-course-slug/",
-  "mode": "scrape" | "scan" | "optimize-all" | "optimize-selected"
-}
-```
-
-**Response:** `{ "jobId": "<uuid>" }`
-
----
-
-#### `POST /api/jobs/optimize`
-
-Run the optimizer against an already-extracted `transcripts.json`.
-
-**Body:**
-```json
-{
-  "transcriptsPath": "output/Course-Title/transcripts.json",
-  "mode": "all" | "selected",
-  "criteria": {
-    "sections": [1, 3],
-    "technologies": ["python", "langchain"],
-    "keyword": "rag"
-  }
-}
-```
-
-`criteria` is only used when `mode` is `"selected"`. All criteria fields are optional and combinable.
-
-**Response:** `{ "jobId": "<uuid>" }`
-
----
-
-#### `GET /api/jobs/:jobId`
-
-Get job status and metadata.
-
-**Response:**
-```json
-{
-  "id": "<uuid>",
-  "status": "pending" | "running" | "waiting-for-login" | "complete" | "failed",
-  "params": { ... },
-  "logCount": 42,
-  "outputFiles": ["Course-Title/combined-transcript.md", ...],
-  "createdAt": "2024-01-01T00:00:00.000Z"
-}
-```
-
----
-
-#### `GET /api/jobs/:jobId/events`
-
-Subscribe to real-time job log stream (Server-Sent Events).
-
-- Replays all buffered log events on connect
-- Emits `data` events with `{ level, message, timestamp }` as each log line is produced
-- Emits a final `event: done` with `{ status }` when the job finishes
-- If the job is already complete when you connect, replays logs and sends `done` immediately
-
----
-
-#### `POST /api/jobs/:jobId/login-confirmed`
-
-Signal that the user has completed login in the browser window. Only valid when job status is `waiting-for-login`.
-
-**Response:** `{ "ok": true }`
-
----
-
-#### `GET /api/jobs/:jobId/files`
-
-List output files produced by a job (paths relative to `output/`).
-
-**Response:** `{ "files": ["Course-Title/transcripts.json", ...] }`
-
----
-
-### Files
-
-#### `GET /api/files/download?path=<relative-path>`
-
-Download an output file. Path must be relative to the `output/` directory — path traversal attempts return `403`.
-
-**Example:**
-```
-GET /api/files/download?path=Course-Title/combined-transcript.md
 ```
 
 ---
@@ -228,113 +126,55 @@ GET /api/files/download?path=Course-Title/combined-transcript.md
 ```
 output/
   Course-Title/
-    course-map.json              <- Full lecture list with URLs and section metadata
+    course-map.json              <- Full lecture list with URLs and sections
     transcripts.json             <- Structured JSON of all lecture results
-    combined-transcript.md       <- All transcripts concatenated into one file
-    skipped.json                 <- Lectures with no transcript panel
-    errors.json                  <- Lectures that failed extraction
+    combined-transcript.md       <- Every transcript in one glorious file
+    skipped.json                 <- Lectures without a transcript panel
+    errors.json                  <- Lectures that gave us trouble
     course-inventory.json        <- Structured inventory (scan/optimize modes)
     course-inventory.md          <- Human-readable inventory table
-    optimized-learning-plan.md   <- Full course study plan (optimize-all mode)
-    selected-learning-plan.md    <- Filtered study plan (optimize-selected mode)
+    optimized-learning-plan.md   <- Full course study plan
+    selected-learning-plan.md    <- Targeted plan (selected mode)
+    build-first-plan.md          <- Build-first ordered plan
+    ai-learning-plan.json        <- AI-generated compressed learning path
     01-Section-Title/
       001-Lecture-Title.md
       002-Lecture-Title.md
-    02-Section-Title/
-      003-Lecture-Title.md
 ```
 
-Each per-lecture `.md` contains the section name, lecture URL, and the full timestamped transcript.
-
 ---
 
-## Optimizer
+## When Things Go Sideways (And They Will, Friend)
 
-The optimizer pipeline runs on top of extracted transcripts and does not require re-scraping.
+*[Salesman puts hand on your shoulder]*
 
-### Course Inventory
+### Transcripts coming back empty
 
-Parses `transcripts.json` and produces a structured inventory including:
+Udemy moved the furniture again. Open Chrome DevTools on a lecture page, find the transcript toggle button and cue rows, and update the relevant selectors in the `SELECTORS` object in `src/types.ts`. Each key is an array of fallbacks — put your new one first.
 
-- **Technologies detected** — from a keyword list covering languages, frameworks, cloud, ML/AI, and more
-- **Hands-on tasks and projects** — signals like "build", "deploy", "implement", "from scratch"
-- **Per-section lecture table** — title, classification, and detected tech items
-
-### Content Classifier
-
-Classifies each lecture into one of four categories based on title and transcript signals:
-
-| Classification | Signals |
-|---|---|
-| `build` | "build", "implement", "deploy", "hands-on", "from scratch", "code along" |
-| `watch` | Standard instructional content |
-| `skim` | "overview", "introduction", "recap", "what is", "comparison" |
-| `skip` | "welcome", "congratulations", "bonus", "discount", "certificate" |
-
-### Study Plan Generator
-
-Generates a `StudyPlan` from the classified inventory. In `selected` mode, filters by any combination of:
-
-- **Sections** — include only specific section numbers
-- **Technologies** — match lectures by detected tech keyword
-- **Keywords** — match lectures by title keyword
-- **Projects** — match lectures by project name
-
----
-
-## Course Discovery
-
-Lecture URLs are discovered using two strategies, always run in combination:
-
-1. **Anchor scan** — fast DOM scan of `<a href>` links on the course overview page
-2. **Click-through discovery** — scroll-reveal loop on the player page that clicks each sidebar item and captures the resulting URL
-
-Click-through discovery handles Udemy's virtual-scrolling sidebar (only items in the viewport are in the DOM). Non-lecture items (role-play, coding exercises, etc.) are detected by inspecting inner anchor `href` before clicking and are skipped automatically. Whichever strategy finds more lectures wins; the anchor scan is a fallback only.
-
----
-
-## Resume / Incremental Extraction
-
-If a run is interrupted, re-run the same command. Lectures that already have output files are skipped automatically. To force re-extraction, delete the target files or use `--overwrite`.
-
-To force a full re-discovery (e.g. after the course is updated), delete `course-map.json` before running.
-
----
-
-## Troubleshooting
-
-### Transcripts are empty / no cues extracted
-
-Udemy may have updated their DOM. In Chrome DevTools on a lecture page:
-
-1. Open the transcript panel manually.
-2. Inspect the toggle button — find its `data-purpose`, `aria-label`, or class.
-3. Inspect a transcript cue row — find its selector.
-4. Update the relevant entries in `src/types.ts` under the `SELECTORS` object.
-
-All selectors live in `SELECTORS` in `src/types.ts`. Each key holds an array of fallbacks tried in order. Add new selectors at the front of the array.
+**This is the #1 reason to have a coding LLM nearby.** Paste the DevTools HTML snippet, ask it to give you the updated selector, drop it in the array. Two minutes. Done.
 
 ### "Login verification failed"
 
-The logged-in indicator selector is stale. Find the current element (avatar, account menu, etc.) while logged in and update `SELECTORS.loggedInIndicator` in `src/types.ts`.
+The logged-in indicator selector went stale. Find the current logged-in element (avatar, account menu, whatever Udemy is calling it this week) and update `SELECTORS.loggedInIndicator` in `src/types.ts`.
 
-### Lectures missing from course map
+### Missing lectures / incomplete course map
 
-If a course has more lectures than discovered, delete `course-map.json` and re-run. The click-through discovery will re-crawl the full sidebar.
+Delete `course-map.json` and re-run. The click-through discovery will re-crawl the entire sidebar from scratch.
+
+### Lectures from a certain point onwards all fail to click
+
+Udemy's virtual-scrolling sidebar may not be scrolling items into view properly. Again — DevTools, coding LLM, `src/course-map.ts`. *We believe in you.*
 
 ---
 
 ## Development
 
 ```bash
-# Type-check without building
-npm run typecheck
-
-# Compile to dist/
-npm run build
-
-# Run directly with tsx (no build step)
-npm run scrape -- "<url>"
+npm run typecheck    # TypeScript check (no build)
+npm run build:ui     # Build UI to dist-ui/
+npm test             # Run unit tests
+npm run dev:ui       # Dev server (UI + API together)
 ```
 
 ### Project Structure
@@ -344,29 +184,30 @@ src/
   index.ts                    <- CLI entry (scrape)
   scan.ts                     <- CLI entry (scan/inventory)
   optimize.ts                 <- CLI entry (optimize/study plan)
-  auth.ts                     <- Playwright login detection and flow
-  browser.ts                  <- Chromium launch with persistent profile
+  auth.ts                     <- Playwright login detection
+  browser.ts                  <- Chromium launcher
   course-map.ts               <- Lecture discovery (anchor scan + click-through)
-  transcript-extractor.ts     <- Transcript panel interaction and row extraction
-  formatter.ts                <- Lecture result -> Markdown formatting
-  storage.ts                  <- File write helpers and path conventions
-  types.ts                    <- Shared types and CSS selector registry (SELECTORS)
-  utils/
-    logger.ts                 <- AppLogger interface, consoleLogger, createJobLogger
+  transcript-extractor.ts     <- Transcript panel interaction
+  formatter.ts                <- Lecture result → Markdown
+  storage.ts                  <- File write helpers
+  types.ts                    <- Shared types + SELECTORS registry ← UPDATE THIS WHEN DOM BREAKS
   optimizer/
-    courseInventory.ts        <- Build CourseInventory from LectureResult[]
+    courseInventory.ts        <- Build CourseInventory from transcripts
     contentClassifier.ts      <- Classify lectures (build/watch/skim/skip)
-    studyPlanGenerator.ts     <- Generate StudyPlan with optional selection criteria
-    markdownWriter.ts         <- Write inventory + plan markdown (protects core files)
-    selectionPrompt.ts        <- CLI interactive selection prompt
+    studyPlanGenerator.ts     <- Generate StudyPlan
+    markdownWriter.ts         <- Write inventory + plan markdown
+    buildFirstPlanGenerator.ts <- Build-first ordering logic
+    aiAnalyzer.ts             <- Two-pass Claude analysis (Haiku + Sonnet)
+    aiClient.ts               <- Anthropic SDK wrapper
   server/
-    index.ts                  <- Express app setup (port 3001)
+    index.ts                  <- Express app (port 3001)
     jobs/
-      jobStore.ts             <- In-memory job store with SSE fan-out
-      jobRunner.ts            <- startScrapeJob, startOptimizeJob
-    routes/
-      jobRoutes.ts            <- /api/jobs/* endpoints
-      fileRoutes.ts           <- /api/files/download (path-traversal guarded)
-  ui/                         <- React/Vite frontend (excluded from root tsconfig)
-    tsconfig.json             <- Extends root, adds DOM lib + react-jsx
+      jobStore.ts             <- In-memory job store + SSE fan-out
+      jobRunner.ts            <- All job runners
+    routes/                   <- API route handlers
+  ui/                         <- React/Vite frontend
 ```
+
+---
+
+*The Udemy Course Compress-a-macator 5000 is not affiliated with, endorsed by, or in any way connected to Udemy, Inc. It is a personal productivity tool for use by authorized course owners only. The management assumes no responsibility for broken selectors, Udemy front-end updates, existential crises triggered by how much content you've been skipping, or any general feelings of having paid too much for a course you could have finished in four hours. Results may vary. Batteries not included.*

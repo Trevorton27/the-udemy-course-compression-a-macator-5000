@@ -6,6 +6,7 @@ export interface JobProgress {
   processed: number;
   total: number;
   done: boolean;
+  visitedStages: Set<string>;
 }
 
 export function useJobProgress(jobId: string | null): JobProgress {
@@ -15,6 +16,7 @@ export function useJobProgress(jobId: string | null): JobProgress {
     processed: 0,
     total: 0,
     done: false,
+    visitedStages: new Set(['waiting']),
   });
 
   useEffect(() => {
@@ -32,12 +34,14 @@ export function useJobProgress(jobId: string | null): JobProgress {
         };
       };
       if (event.meta?.stage) {
+        const newStage = event.meta.stage;
         setProgress((prev) => ({
           ...prev,
-          stage: event.meta!.stage!,
+          stage: newStage,
           currentLecture: event.meta!.currentLecture ?? prev.currentLecture,
           processed: event.meta!.processed ?? prev.processed,
           total: event.meta!.total ?? prev.total,
+          visitedStages: new Set([...prev.visitedStages, newStage]),
         }));
       }
     };

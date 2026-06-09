@@ -8,16 +8,19 @@ import LectureSelector from './components/LectureSelector';
 import StudyPlanPreview from './components/StudyPlanPreview';
 import ErrorRecoveryPanel from './components/ErrorRecoveryPanel';
 import CourseLibraryPanel from './components/CourseLibrary';
-import { submitScrapeJob, submitOptimizeJob, getJob } from './api';
+import AiOptimizePanel from './components/AiOptimizePanel';
+import AiStudyPlanView from './components/AiStudyPlanView';
+import { submitScrapeJob, submitOptimizeJob, getJob, getFileContent } from './api';
 import { useJobProgress } from './hooks/useJobProgress';
 import type {
   DashboardData,
   CourseInventory,
   LectureResult,
   CourseLibraryEntry,
+  AiLearningPlan,
 } from './types';
 
-type View = 'home' | 'job' | 'dashboard' | 'course-map' | 'study-plan' | 'selector' | 'library';
+type View = 'home' | 'job' | 'dashboard' | 'course-map' | 'study-plan' | 'selector' | 'library' | 'ai-plan';
 
 interface JobState {
   id: string;
@@ -50,6 +53,9 @@ export default function App() {
   // Study plan state
   const [studyPlanPaths, setStudyPlanPaths] = useState<string[]>([]);
   const [studyPlanCourseTitle, setStudyPlanCourseTitle] = useState('');
+
+  // AI plan state
+  const [aiPlan, setAiPlan] = useState<AiLearningPlan | null>(null);
 
   // Progress timeline (second EventSource to same endpoint)
   const progress = useJobProgress(job?.id ?? null);
@@ -125,6 +131,7 @@ export default function App() {
 
     const outputDir = inventoryFile.split('/').slice(0, -1).join('/');
     const errFile = files.find((f) => f.endsWith('errors.json')) ?? '';
+    const aiPlanFile = files.find((f) => f.endsWith('ai-learning-plan.json')) ?? '';
 
     setDashboardData({
       courseTitle: inventory.courseTitle,
@@ -139,6 +146,8 @@ export default function App() {
       hasErrors: fCount > 0,
       errorCount: fCount,
       availablePlanPaths: planPaths,
+      hasAiPlan: !!aiPlanFile,
+      aiPlanPath: aiPlanFile,
     });
     setDashboardOutputFiles(files);
     setTranscriptsPath(transcriptsFile);
@@ -211,6 +220,23 @@ export default function App() {
     }
   }
 
+  async function handleOpenAiPlan() {
+    if (!dashboardData?.aiPlanPath) return;
+    try {
+      const content = await getFileContent(dashboardData.aiPlanPath);
+      setAiPlan(JSON.parse(content) as AiLearningPlan);
+      setView('ai-plan');
+    } catch {
+      // best effort
+    }
+  }
+
+  function handleAiJobStarted(jobId: string) {
+    setJob({ id: jobId, status: 'pending', outputFiles: [], mode: 'ai-optimize' });
+    setDashboardData(null);
+    setView('job');
+  }
+
   async function handleLibraryOpenDashboard(entry: CourseLibraryEntry) {
     const baseFiles = [
       `${entry.id}/course-inventory.json`,
@@ -218,6 +244,7 @@ export default function App() {
       entry.hasOptimizedPlan ? `${entry.id}/optimized-learning-plan.md` : null,
       entry.hasSelectedPlan ? `${entry.id}/selected-learning-plan.md` : null,
       entry.hasBuildFirstPlan ? `${entry.id}/build-first-plan.md` : null,
+      entry.hasAiPlan ? `${entry.id}/ai-learning-plan.json` : null,
       entry.failedCount > 0 ? `${entry.id}/errors.json` : null,
     ].filter(Boolean) as string[];
 
@@ -328,12 +355,19 @@ export default function App() {
             onOpenStudyPlan={handleOpenStudyPlan}
             onOpenSelector={handleOpenSelector}
             onRetryErrors={() => {}}
+            onOpenAiPlan={handleOpenAiPlan}
           />
           {dashboardData.hasErrors && errorFilePath && (
             <ErrorRecoveryPanel
               errorFilePath={errorFilePath}
               transcriptsPath={transcriptsPath}
               onRetryStarted={handleRetryStarted}
+            />
+          )}
+          {transcriptsPath && (
+            <AiOptimizePanel
+              transcriptsPath={transcriptsPath}
+              onJobStarted={handleAiJobStarted}
             />
           )}
         </div>
@@ -373,6 +407,13 @@ export default function App() {
         <StudyPlanPreview
           planPaths={studyPlanPaths}
           courseTitle={studyPlanCourseTitle}
+          onBack={() => dashboardData ? setView('dashboard') : setView('home')}
+        />
+      )}
+
+      {view === 'ai-plan' && aiPlan && (
+        <AiStudyPlanView
+          plan={aiPlan}
           onBack={() => dashboardData ? setView('dashboard') : setView('home')}
         />
       )}

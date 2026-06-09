@@ -29,6 +29,10 @@ const MODE_DESCRIPTIONS = [
     label: 'Extract + build-first optimize',
     description: 'Everything in scan, then generates a build-first study plan that prioritizes all hands-on build lectures before watch lectures. Intro, outro, and bonus lectures are automatically moved to skip. Outputs a build-first-plan.md.',
   },
+  {
+    label: 'Extract + AI-powered optimization (Claude)',
+    description: 'Everything in scan, then runs a two-pass Claude analysis: Haiku scores every lecture for watch value and concept coverage, Sonnet synthesizes a compressed learning path, identifies redundancy clusters, and generates portfolio deliverables. Outputs an ai-learning-plan.json. Requires ANTHROPIC_API_KEY.',
+  },
 ];
 
 function ModesModal({ onClose }: { onClose: () => void }) {

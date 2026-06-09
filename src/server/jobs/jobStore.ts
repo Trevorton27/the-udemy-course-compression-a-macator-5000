@@ -29,7 +29,13 @@ export interface RetryJobParams {
   lectures: FailedLecture[];
 }
 
-export type JobParams = ScrapeJobParams | OptimizeJobParams | RetryJobParams;
+export interface AiOptimizeJobParams {
+  type: 'ai-optimize';
+  transcriptsPath: string;
+  focusPrompt?: string;
+}
+
+export type JobParams = ScrapeJobParams | OptimizeJobParams | RetryJobParams | AiOptimizeJobParams;
 
 export interface Job {
   id: string;

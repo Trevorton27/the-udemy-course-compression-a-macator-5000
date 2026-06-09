@@ -32,6 +32,7 @@ function makeEntry(id: string, overrides: Partial<CourseLibraryEntry> = {}): Cou
     hasOptimizedPlan: false,
     hasSelectedPlan: false,
     hasBuildFirstPlan: false,
+    hasAiPlan: false,
     ...overrides,
   };
 }

@@ -3,6 +3,8 @@ const STAGES = [
   { key: 'discovering', label: 'Discovering' },
   { key: 'extracting', label: 'Extracting' },
   { key: 'building-inventory', label: 'Inventory' },
+  { key: 'analyzing', label: 'Analyzing' },
+  { key: 'synthesizing', label: 'Synthesizing' },
   { key: 'generating-plan', label: 'Plan' },
   { key: 'complete', label: 'Complete' },
 ];
@@ -12,18 +14,24 @@ interface Props {
   currentLecture: string | undefined;
   processed: number;
   total: number;
+  visitedStages?: Set<string>;
 }
 
-export default function ProgressTimeline({ stage, currentLecture, processed, total }: Props) {
-  const activeIdx = STAGES.findIndex((s) => s.key === stage);
+export default function ProgressTimeline({ stage, currentLecture, processed, total, visitedStages }: Props) {
   const isFailed = stage === 'failed';
+  const visited = visitedStages ?? new Set([stage]);
+
+  // Only show stages that are relevant to this job (visited or active or complete)
+  const activeStages = STAGES.filter(
+    (s) => visited.has(s.key) || s.key === stage || s.key === 'complete',
+  );
 
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-        {STAGES.map((s, i) => {
+        {activeStages.map((s) => {
           const isActive = s.key === stage;
-          const isComplete = activeIdx > i && !isFailed;
+          const isComplete = visited.has(s.key) && !isActive && !isFailed;
           let bg = 'var(--border)';
           let color = 'var(--text-muted)';
           if (isFailed && isActive) {
@@ -71,16 +79,9 @@ export default function ProgressTimeline({ stage, currentLecture, processed, tot
         )}
       </div>
 
-      {stage === 'extracting' && total > 0 && (
+      {(stage === 'extracting' || stage === 'analyzing') && total > 0 && (
         <div style={{ marginTop: 6 }}>
-          <div
-            style={{
-              height: 6,
-              background: 'var(--border)',
-              borderRadius: 3,
-              overflow: 'hidden',
-            }}
-          >
+          <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
@@ -111,6 +112,27 @@ export default function ProgressTimeline({ stage, currentLecture, processed, tot
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {stage === 'synthesizing' && (
+        <div style={{ marginTop: 6 }}>
+          <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: '100%',
+                background: `linear-gradient(90deg, var(--accent) 0%, var(--accent-subtle) 50%, var(--accent) 100%)`,
+                backgroundSize: '200% 100%',
+                borderRadius: 3,
+                animation: 'shimmer 1.5s infinite linear',
+              }}
+            />
+          </div>
+          <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+            Claude is synthesizing your learning path…
+          </p>
         </div>
       )}
     </div>

@@ -32,12 +32,15 @@ async function expandPlayerSidebarSections(page: Page, logger: AppLogger): Promi
   ];
 
   const MAX_ROUNDS = 10;
+  let prevCollapsedCount = Infinity;
   for (let round = 1; round <= MAX_ROUNDS; round++) {
     let collapsed: Awaited<ReturnType<Page['$$']>> = [];
+    let usedSel = '';
 
     for (const sel of COLLAPSED_SELECTORS) {
       collapsed = await page.$$(sel);
       if (collapsed.length > 0) {
+        usedSel = sel;
         logger.info(`  [expand round ${round}] ${collapsed.length} collapsed via "${sel}"`);
         break;
       }
@@ -47,6 +50,15 @@ async function expandPlayerSidebarSections(page: Page, logger: AppLogger): Promi
       logger.info(`  All sidebar sections expanded after ${round - 1} round(s).`);
       return;
     }
+
+    // If the count hasn't decreased since the last round, the buttons are stuck and
+    // clicking them isn't working (e.g. off-screen, covered by overlay, or decorative).
+    // Break early rather than wasting 10 rounds.
+    if (collapsed.length >= prevCollapsedCount) {
+      logger.info(`  Expand loop stuck at ${collapsed.length} buttons (${usedSel}) — proceeding.`);
+      return;
+    }
+    prevCollapsedCount = collapsed.length;
 
     for (const btn of collapsed) {
       try {
@@ -191,7 +203,16 @@ async function discoverLecturesByClicking(page: Page, logger: AppLogger, playerU
 
       const prevUrl = page.url().split('#')[0];
       try {
-        await item.click({ timeout: 5000 });
+        // Scroll the item into view before clicking — items deep in a virtual-scroll
+        // sidebar may be in the DOM but outside the visible scrollport.
+        await item.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+        await page.waitForTimeout(150);
+        try {
+          await item.click({ timeout: 5000 });
+        } catch {
+          // Fallback: force-click bypasses interactability checks (overlays, clipping, etc.)
+          await item.click({ timeout: 5000, force: true });
+        }
         await page.waitForFunction(
           (prev: string) => location.href.split('#')[0] !== prev,
           prevUrl,

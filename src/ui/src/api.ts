@@ -82,3 +82,16 @@ export async function deleteFromLibrary(id: string): Promise<void> {
   const res = await fetch(`/api/library/${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export async function submitAiOptimizeJob(
+  transcriptsPath: string,
+  focusPrompt?: string,
+): Promise<{ jobId: string }> {
+  const res = await fetch('/api/jobs/ai-optimize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transcriptsPath, focusPrompt }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

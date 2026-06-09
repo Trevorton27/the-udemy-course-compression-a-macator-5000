@@ -55,6 +55,7 @@ export default function JobView({ job, progress, onDone, onLoginConfirmed, onNew
         currentLecture={progress.currentLecture}
         processed={progress.processed}
         total={progress.total}
+        visitedStages={progress.visitedStages}
       />
 
       <h3 style={{ margin: '0 0 4px' }}>Live Log</h3>

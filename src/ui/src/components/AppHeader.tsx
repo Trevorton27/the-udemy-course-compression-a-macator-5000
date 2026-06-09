@@ -25,7 +25,7 @@ export default function AppHeader({ darkMode, onToggleDark, onGoLibrary, onGoHom
             cursor: onGoHome ? 'pointer' : 'default',
           }}
         >
-          The Udemy Course Compression-a-macator 5000
+          The Udemy Course Compress-a-macator 5000
         </h1>
         <p style={{ color: 'var(--text-muted)', margin: 0 }}>
           Extract, scan, and optimize Udemy course transcripts.

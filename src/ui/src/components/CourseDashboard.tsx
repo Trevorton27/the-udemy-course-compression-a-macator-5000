@@ -7,6 +7,7 @@ interface Props {
   onOpenStudyPlan: () => void;
   onOpenSelector: () => void;
   onRetryErrors: () => void;
+  onOpenAiPlan?: () => void;
 }
 
 const CLASSIFICATION_COLORS: Record<string, string> = {
@@ -23,6 +24,7 @@ export default function CourseDashboard({
   onOpenStudyPlan,
   onOpenSelector,
   onRetryErrors,
+  onOpenAiPlan,
 }: Props) {
   const hasPlan = data.availablePlanPaths.length > 0;
   const hasInventory = outputFiles.some((f) => f.endsWith('course-inventory.json'));
@@ -200,6 +202,23 @@ export default function CourseDashboard({
             }}
           >
             Customize Selection
+          </button>
+        )}
+        {data.hasAiPlan && onOpenAiPlan && (
+          <button
+            onClick={onOpenAiPlan}
+            style={{
+              padding: '10px 20px',
+              background: 'var(--accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 14,
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
+            View AI Plan
           </button>
         )}
       </div>

@@ -26,6 +26,7 @@ import { writeInventory, writeOptimizedPlan, writeSelectedPlan, writeBuildFirstP
 import { createJobLogger } from '../../utils/logger.js';
 import { appendLog, sendSseDone, type Job } from './jobStore.js';
 import { buildLibraryEntryFromDir, upsertLibraryEntry } from '../../storage/courseLibrary.js';
+import { generateAndSaveAiPlan, estimateAnalysisCost, isCacheValid } from '../../optimizer/aiAnalyzer.js';
 
 const DELAY_MIN_MS = parseInt(process.env['DELAY_MIN_MS'] ?? '1500', 10);
 const DELAY_MAX_MS = parseInt(process.env['DELAY_MAX_MS'] ?? '3500', 10);
@@ -136,7 +137,8 @@ export async function startScrapeJob(job: Job): Promise<void> {
       params.mode === 'scan' ||
       params.mode === 'optimize-all' ||
       params.mode === 'optimize-selected' ||
-      params.mode === 'optimize-build-first'
+      params.mode === 'optimize-build-first' ||
+      params.mode === 'optimize-ai'
     ) {
       logger.info('\nRunning scan/inventory...', { stage: 'building-inventory' });
       const inventory = buildInventory(results, courseTitle);
@@ -155,6 +157,11 @@ export async function startScrapeJob(job: Job): Promise<void> {
         const plan = generateBuildFirstPlan(inventory, classified);
         writeBuildFirstPlan(outputDir, plan, courseTitle, logger);
         job.outputFiles.push(path.join(outputDir, 'build-first-plan.md'));
+      } else if (params.mode === 'optimize-ai') {
+        const transcriptsPath = path.join(outputDir, 'transcripts.json');
+        await generateAndSaveAiPlan(results, courseTitle, outputDir, transcriptsPath, undefined, logger);
+        job.outputFiles.push(path.join(outputDir, 'ai-learning-plan.json'));
+        job.outputFiles.push(path.join(outputDir, 'ai-learning-plan.md'));
       }
       // optimize-selected: frontend fetches inventory JSON, user selects, then second optimize job
     }
@@ -342,6 +349,61 @@ export async function startRetryJob(job: Job): Promise<void> {
   } finally {
     scrapeActive = false;
     await context.close();
+    try {
+      const dir = path.dirname(path.resolve(params.transcriptsPath));
+      upsertLibraryEntry(buildLibraryEntryFromDir(dir, job.status as 'complete' | 'failed'));
+    } catch {
+      // best effort
+    }
+    sendSseDone(job);
+  }
+}
+
+export async function startAiOptimizeJob(job: Job): Promise<void> {
+  job.status = 'running';
+  const logger = createJobLogger(job.id, (e) => appendLog(job, e));
+
+  const params = job.params;
+  if (params.type !== 'ai-optimize') return;
+
+  try {
+    const resolvedPath = path.resolve(params.transcriptsPath);
+    const dir = path.dirname(resolvedPath);
+    const courseTitle = deriveCourseTitle(dir);
+
+    // Check cache — skip if transcripts haven't changed
+    if (isCacheValid(resolvedPath, dir)) {
+      logger.success('Using cached AI analysis (transcripts unchanged).', { stage: 'complete' });
+      job.outputFiles.push(path.join(dir, 'ai-learning-plan.json'));
+      job.outputFiles.push(path.join(dir, 'ai-learning-plan.md'));
+      job.status = 'complete';
+      return;
+    }
+
+    logger.info(`Loading transcripts from: ${resolvedPath}`, { stage: 'analyzing', processed: 0, total: 0 });
+    const results = loadTranscriptsJson(resolvedPath);
+
+    const estimate = estimateAnalysisCost(results);
+    logger.info(
+      `Course: "${courseTitle}" — ${results.length} lectures, estimated cost: ${estimate.formatted}`,
+    );
+
+    const plan = await generateAndSaveAiPlan(results, courseTitle, dir, resolvedPath, params.focusPrompt, logger);
+
+    job.outputFiles.push(path.join(dir, 'ai-learning-plan.json'));
+    job.outputFiles.push(path.join(dir, 'ai-learning-plan.md'));
+
+    const { compressionRatio, totalHoursOriginal, totalHoursOptimized } = plan.synthesis;
+    logger.success(
+      `AI optimization complete — ${compressionRatio}% compression (${totalHoursOriginal}h → ${totalHoursOptimized}h)`,
+      { stage: 'complete' },
+    );
+    job.status = 'complete';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`Fatal error: ${msg}`, { stage: 'failed' });
+    job.status = 'failed';
+  } finally {
     try {
       const dir = path.dirname(path.resolve(params.transcriptsPath));
       upsertLibraryEntry(buildLibraryEntryFromDir(dir, job.status as 'complete' | 'failed'));

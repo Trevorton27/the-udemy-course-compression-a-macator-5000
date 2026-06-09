@@ -13,6 +13,7 @@ export interface CourseLibraryEntry {
   hasOptimizedPlan: boolean;
   hasSelectedPlan: boolean;
   hasBuildFirstPlan: boolean;
+  hasAiPlan: boolean;
 }
 
 export interface CourseLibrary {

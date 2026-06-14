@@ -1,6 +1,6 @@
 # The Udemy Course Compress-a-macator 5000
 
-> *"Folks, have I got a deal for YOU today!"*
+> *"Folks, have I got a deal for YOU!"*
 
 Step right up, step right UP, ladies and gentlemen, and feast your eyes on the MARVEL of the modern age — **The Udemy Course Compress-a-macator 5000!** That's right, friend, while your neighbors are sitting through FORTY hours of video content, YOU could be blazing through a surgically compressed learning path in a FRACTION of the time!
 
